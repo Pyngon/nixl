@@ -16,6 +16,8 @@
  */
 
 #include <iostream>
+#include <future>
+#include <vector>
 #include "nixl.h"
 #include "serdes/serdes.h"
 #include "backend/backend_engine.h"
@@ -812,12 +814,12 @@ nixlAgent::postXferReq(nixlXferReqH *req_hndl,
     if (!req_hndl)
         return NIXL_ERR_INVALID_PARAM;
 
-    NIXL_SHARED_LOCK_GUARD(data->lock);
-    // Check if the remote was invalidated before post/repost
-    if (data->remoteSections.count(req_hndl->remoteAgent) == 0) {
-        delete req_hndl;
-        return NIXL_ERR_NOT_FOUND;
-    }
+    // NIXL_SHARED_LOCK_GUARD(data->lock);
+    // // Check if the remote was invalidated before post/repost
+    // if (data->remoteSections.count(req_hndl->remoteAgent) == 0) {
+    //     delete req_hndl;
+    //     return NIXL_ERR_NOT_FOUND;
+    // }
 
     // We can't repost while a request is in progress
     if (req_hndl->status == NIXL_IN_PROG) {
@@ -862,6 +864,35 @@ nixlAgent::postXferReq(nixlXferReqH *req_hndl,
                                       &opt_args);
     req_hndl->status = ret;
     return ret;
+}
+
+std::vector<nixl_status_t>
+nixlAgent::postXferReqBatched(const std::vector<nixlXferReqH*> &req_hndls,
+                              const std::vector<const nixl_opt_args_t*> &extra_params) const {
+    if (req_hndls.empty()) {
+        return {NIXL_ERR_INVALID_PARAM};
+    }
+
+    std::vector<std::future<nixl_status_t>> futures;
+    futures.reserve(req_hndls.size());
+
+    for (size_t i = 0; i < req_hndls.size(); ++i) {
+        const nixl_opt_args_t* params = (i < extra_params.size()) ? extra_params[i] : nullptr;
+        futures.emplace_back(
+            std::async(std::launch::async, [this, req_hndl = req_hndls[i], params]() {
+                return this->postXferReq(req_hndl, params);
+            })
+        );
+    }
+
+    std::vector<nixl_status_t> results;
+    results.reserve(req_hndls.size());
+
+    for (auto& future : futures) {
+        results.push_back(future.get());
+    }
+
+    return results;
 }
 
 nixl_status_t
