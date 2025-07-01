@@ -213,8 +213,7 @@ std::optional<xferBenchIOV> xferBenchNixlWorker::initBasicDescDram(size_t buffer
 
     addr = calloc(1, buffer_size);
     if (!addr) {
-        std::cerr << "Failed to allocate " << buffer_size
-                  << " bytes of DRAM memory" << std::endl;
+        std::cerr << "Failed to allocate " << buffer_size << " bytes of DRAM memory" << std::endl;
         return std::nullopt;
     }
 
@@ -368,8 +367,9 @@ createFileFds (std::string name) {
     return fds;
 }
 
-std::optional<xferBenchIOV> xferBenchNixlWorker::initBasicDescFile(size_t buffer_size, int fd) {
-    auto ret = std::optional<xferBenchIOV>(std::in_place, (uintptr_t)0, buffer_size, fd);
+std::optional<xferBenchIOV>
+xferBenchNixlWorker::initBasicDescFile (size_t buffer_size, int fd) {
+    auto ret = std::optional<xferBenchIOV> (std::in_place, (uintptr_t)0, buffer_size, fd);
     // Fill up with data
     void *buf = (void *)malloc(buffer_size);
     if (!buf) {
@@ -380,7 +380,7 @@ std::optional<xferBenchIOV> xferBenchNixlWorker::initBasicDescFile(size_t buffer
 
     // File is always initialized with XFERBENCH_TARGET_BUFFER_ELEMENT
     memset(buf, XFERBENCH_TARGET_BUFFER_ELEMENT, buffer_size);
-    int rc = pwrite(fd, buf, buffer_size, 0);
+    int rc = pwrite (fd, buf, buffer_size, 0);
     if (rc < 0) {
         std::cerr << "Failed to write to file: " << fd
                   << " with error: " << strerror(errno) << std::endl;
@@ -436,15 +436,14 @@ std::vector<std::vector<xferBenchIOV>> xferBenchNixlWorker::allocateMemory(int n
         size_t file_size = xferBenchConfig::total_buffer_size / num_files;
         for (size_t f = 0; f < num_files; f++) {
             std::optional<xferBenchIOV> basic_desc;
-            basic_desc = initBasicDescFile(file_size, remote_fds[f]);
+            basic_desc = initBasicDescFile (file_size, remote_fds[f]);
             if (basic_desc) {
-                remote_iovs.push_back(basic_desc.value());
+                remote_iovs.push_back (basic_desc.value());
             }
         }
-        nixl_reg_dlist_t desc_list(FILE_SEG);
-        iovListToNixlRegDlist(remote_iovs, desc_list);
-        CHECK_NIXL_ERROR(agent->registerMem(desc_list, &opt_args),
-                    "registerMem failed");
+        nixl_reg_dlist_t desc_list (FILE_SEG);
+        iovListToNixlRegDlist (remote_iovs, desc_list);
+        CHECK_NIXL_ERROR (agent->registerMem (desc_list, &opt_args), "registerMem failed");
 
         num_devices = 1;
     } else {
@@ -518,12 +517,11 @@ void xferBenchNixlWorker::deallocateMemory(std::vector<std::vector<xferBenchIOV>
 
     if (xferBenchConfig::isStorageBackend()) {
         for (auto &iov: remote_iovs) {
-            cleanupBasicDescFile(iov);
+            cleanupBasicDescFile (iov);
         }
-        nixl_reg_dlist_t desc_list(FILE_SEG);
-        iovListToNixlRegDlist(remote_iovs, desc_list);
-        CHECK_NIXL_ERROR(agent->deregisterMem(desc_list, &opt_args),
-                         "deregisterMem failed");
+        nixl_reg_dlist_t desc_list (FILE_SEG);
+        iovListToNixlRegDlist (remote_iovs, desc_list);
+        CHECK_NIXL_ERROR (agent->deregisterMem (desc_list, &opt_args), "deregisterMem failed");
     }
 }
 
@@ -593,7 +591,7 @@ xferBenchNixlWorker::exchangeIOV(const std::vector<std::vector<xferBenchIOV>> &l
             size_t num_threads = xferBenchConfig::num_threads;
             size_t unit_size = xferBenchConfig::total_buffer_size / (num_threads * num_files);
             size_t base_offset = 0;
-            for (auto &iov_list: local_iovs) {
+            for (auto &iov_list : local_iovs) {
                 std::vector<xferBenchIOV> remote_iov_list;
                 batch_size = iov_list.size() / num_files;
                 for (size_t i = 0; i < num_files; i++) {
@@ -601,32 +599,32 @@ xferBenchNixlWorker::exchangeIOV(const std::vector<std::vector<xferBenchIOV>> &l
                     for (size_t j = 0; j < batch_size; j++) {
                         size_t iov_idx = i * batch_size + j;
 
-                        remote_iov_list.emplace_back(
-                            (uintptr_t)(base_offset + batch_offset),
-                            iov_list[iov_idx].len, remote_fds[i]);
+                        remote_iov_list.emplace_back ((uintptr_t)(base_offset + batch_offset),
+                                                      iov_list[iov_idx].len,
+                                                      remote_fds[i]);
                         batch_offset += iov_list[iov_idx].len;
                     }
                 }
-                res.push_back(remote_iov_list);
+                res.push_back (remote_iov_list);
                 base_offset += unit_size;
             }
         } else {
             size_t files_per_thread = num_files / local_iovs.size();
             size_t i = 0;
-            for (auto &iov_list: local_iovs) {
+            for (auto &iov_list : local_iovs) {
                 std::vector<xferBenchIOV> remote_iov_list;
                 batch_size = iov_list.size() / files_per_thread;
                 for (size_t j = 0; j < files_per_thread; j++) {
                     size_t batch_offset = 0;
                     for (size_t k = 0; k < batch_size; k++) {
                         size_t iov_idx = j * batch_size + k;
-                        remote_iov_list.emplace_back((uintptr_t)batch_offset,
-                            iov_list[iov_idx].len,
-                            remote_fds[j + i * files_per_thread]);
+                        remote_iov_list.emplace_back ((uintptr_t)batch_offset,
+                                                      iov_list[iov_idx].len,
+                                                      remote_fds[j + i * files_per_thread]);
                         batch_offset += iov_list[iov_idx].len;
                     }
                 }
-                res.push_back(remote_iov_list);
+                res.push_back (remote_iov_list);
                 i++;
             }
         }
