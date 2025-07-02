@@ -55,7 +55,9 @@ DEFINE_uint64(max_block_size, 64 * (1 << 20), "Max size of block \
 DEFINE_uint64(start_batch_size, 1, "Starting size of batch (Default: 1)");
 DEFINE_uint64(max_batch_size, 1, "Max size of batch (starts from 1)");
 DEFINE_int32(num_iter, 1000, "Max iterations");
-DEFINE_int32(large_block_iter_factor, 1, "factor to reduce test iteration when testing large block size(>1MB)");
+DEFINE_int32 (large_block_iter_factor,
+              1,
+              "factor to reduce test iteration when testing large block size(>1MB)");
 DEFINE_int32(warmup_iter, 100, "Number of warmup iterations before timing");
 DEFINE_int32(num_threads, 1,
              "Number of threads used by benchmark."
@@ -344,8 +346,9 @@ void xferBenchConfig::printConfig() {
               << max_batch_size << std::endl;
     std::cout << std::left << std::setw(60) << "Num iter (--num_iter=N)" << ": "
               << num_iter << std::endl;
-    std::cout << std::left << std::setw(60) << "Large block iter factor (--large_block_iter_factor=N)" << ": "
-              << large_block_iter_factor << std::endl;
+    std::cout << std::left << std::setw (60)
+              << "Large block iter factor (--large_block_iter_factor=N)"
+              << ": " << large_block_iter_factor << std::endl;
     std::cout << std::left << std::setw(60) << "Warmup iter (--warmup_iter=N)" << ": "
               << warmup_iter << std::endl;
     std::cout << std::left << std::setw(60) << "Num threads (--num_threads=N)" << ": "
