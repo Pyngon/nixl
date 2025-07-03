@@ -516,7 +516,7 @@ void xferBenchNixlWorker::deallocateMemory(std::vector<std::vector<xferBenchIOV>
     }
 
     if (xferBenchConfig::isStorageBackend()) {
-        for (auto &iov: remote_iovs) {
+        for (auto &iov : remote_iovs) {
             cleanupBasicDescFile (iov);
         }
         nixl_reg_dlist_t desc_list (FILE_SEG);
